@@ -4,12 +4,8 @@
 # @Author  : LLZ
 # @File    : step1.py
 # @Software: PyCharm
-# !/usr/bin/env python
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime
 
@@ -22,7 +18,6 @@ st.set_page_config(
 )
 
 
-# 添加缓存装饰器以提高性能
 @st.cache_data
 def load_data():
     """加载和生成示例数据"""
@@ -102,7 +97,6 @@ def main():
     st.subheader("📋 数据集列表")
 
     if len(filtered_df) > 0:
-        # 使用Streamlit原生的dataframe显示
         st.dataframe(
             filtered_df,
             column_config={
@@ -131,66 +125,47 @@ def main():
     else:
         st.warning("没有找到匹配的数据集")
 
-    # 可视化区域
+    # 可视化区域 - 使用 Streamlit 内置图表
     st.subheader("📈 数据可视化")
 
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.markdown("#### 基因组浏览器视图")
+        st.markdown("#### 实验类型分布")
+        assay_counts = df['assay'].value_counts()
+        st.bar_chart(assay_counts)
 
-        # 创建模拟的基因组浏览器视图
-        fig = go.Figure()
+        # 显示一些统计数据
+        st.markdown("#### 数据统计")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**文件大小分布**")
+            # 模拟文件大小数据
+            file_sizes = [int(x.split()[0]) for x in df['file_size']]
+            st.metric("平均大小", f"{np.mean(file_sizes):.1f} MB")
+            st.metric("最大大小", f"{np.max(file_sizes)} MB")
 
-        # 添加模拟的基因轨迹
-        x_values = list(range(1000, 1100))
-        y_values = np.sin(np.array(x_values) / 5) * 10 + 15 + np.random.normal(0, 2, 100)
-
-        fig.add_trace(go.Scatter(
-            x=x_values,
-            y=y_values,
-            mode='lines',
-            fill='tozeroy',
-            line=dict(color='#3498db'),
-            name='信号强度'
-        ))
-
-        fig.update_layout(
-            title="模拟基因组信号 - 染色体1: 1,000,000-1,000,500",
-            xaxis_title="基因组位置",
-            yaxis_title="信号强度",
-            height=400,
-            showlegend=True,
-            template="plotly_white"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            st.write("**时间分布**")
+            monthly_count = df.groupby(df['date_added'].dt.month).size()
+            st.line_chart(monthly_count)
 
     with col2:
-        st.markdown("#### 数据分布")
+        st.markdown("#### 物种分布")
+        species_counts = df['species'].value_counts()
+        st.dataframe(species_counts)
 
-        # 创建饼图显示实验类型分布
-        assay_counts = df['assay'].value_counts()
-        fig_pie = px.pie(
-            values=assay_counts.values,
-            names=assay_counts.index,
-            title="实验类型分布"
-        )
-
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-        # 最近添加的数据集
         st.markdown("#### 最近添加")
         recent_datasets = df.nlargest(5, 'date_added')
         for _, row in recent_datasets.iterrows():
-            with st.expander(f"**{row['id']}**"):
-                st.write(f"{row['description']}")
-                st.caption(f"添加时间: {row['date_added'].strftime('%Y-%m-%d')}")
+            st.write(f"**{row['id']}**")
+            st.caption(f"{row['description']}")
+            st.caption(f"添加: {row['date_added'].strftime('%Y-%m-%d')}")
+            st.divider()
 
     # 侧边栏
     with st.sidebar:
         st.markdown("## 🧭 导航")
-
         st.markdown("---")
         st.markdown("### 📤 数据上传")
 
@@ -198,34 +173,16 @@ def main():
         if uploaded_file is not None:
             st.success(f"已上传: {uploaded_file.name}")
 
-            # 显示上传文件的元数据表单
-            with st.form("metadata_form"):
-                st.markdown("### 文件元数据")
-                dataset_id = st.text_input("数据集ID")
-                description = st.text_area("描述")
-                species = st.selectbox("物种", ["人类", "小鼠", "大鼠", "果蝇", "斑马鱼", "其他"])
-                cell_type = st.text_input("细胞类型")
-                condition = st.selectbox("实验条件", ["正常", "缺氧", "药物治疗", "基因敲除", "过表达", "其他"])
-                assay_type = st.selectbox("实验类型", ["ChIP-seq", "ATAC-seq", "RNA-seq", "WGBS", "Hi-C", "其他"])
-
-                submitted = st.form_submit_button("提交元数据")
-                if submitted:
-                    st.success("元数据已提交！")
-
         st.markdown("---")
         st.markdown("### ℹ️ 关于")
         st.markdown("""
-        **GenomeDB** 是一个开放的基因组数据浏览器和数据库，为研究人员提供高质量的多组学数据。
+        **GenomeDB** 是一个开放的基因组数据浏览器和数据库。
 
         **功能特点:**
         - 多维度数据浏览和筛选
-        - 集成基因组浏览器
+        - 数据可视化
         - 支持多种数据格式
         - 开放数据访问
-
-        **技术支持:**
-        - 📧 contact@genomedb.org
-        - 🌐 www.genomedb.org
         """)
 
 
